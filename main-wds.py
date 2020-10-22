@@ -295,6 +295,7 @@ def identity(x):
 
 
 def worker_urls(urls):
+    urls = f"pipe:aws s3 cp {urls} - || true"
     result = wds.worker_urls(urls)
     print("worker_urls returning", len(result), "of", len(urls), "urls", file=sys.stderr)
     return result
