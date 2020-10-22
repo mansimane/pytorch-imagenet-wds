@@ -29,7 +29,9 @@ parser.add_argument('--data', metavar='DIR', default='./data',
                     help='path to dataset')
 parser.add_argument('--loader', default='wds', help='loader to use: orig, wds')
 parser.add_argument('--shuffle', type=int, default=1000, help='shuffle buffer size for WebDataset')
-parser.add_argument('--trainshards', default='./shards/imagenet-train-{000000..001281}.tar', help='path/URL for ImageNet shards',
+# parser.add_argument('--trainshards', default='./shards/imagenet-train-{000000..001281}.tar', help='path/URL for ImageNet shards',
+# )
+parser.add_argument('--trainshards', default='s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{000000..000554}.tar', help='path/URL for ImageNet shards',
 )
 parser.add_argument('--trainsize', type=int, default=1281167, help='ImageNet training set size')
 parser.add_argument('--augmentation', default='full')
@@ -87,7 +89,6 @@ best_acc1 = 0
 
 def main():
     args = parser.parse_args()
-
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -295,7 +296,7 @@ def identity(x):
 
 
 def worker_urls(urls):
-    urls = f"pipe:aws s3 cp {urls} - || true"
+    # urls = f"pipe:aws s3 cp {urls} - || true"
     result = wds.worker_urls(urls)
     print("worker_urls returning", len(result), "of", len(urls), "urls", file=sys.stderr)
     return result
@@ -305,8 +306,10 @@ def make_train_loader_wds(args):
     print("=> using WebDataset loader")
     train_transform = make_train_transform(args)
     num_batches = args.trainsize // args.batch_size
+    s3_train_shards  = f"pipe:aws s3 cp {args.trainshards} - || true"
+
     train_dataset = (
-        wds.Dataset(args.trainshards, length=num_batches, shard_selection=worker_urls)
+        wds.Dataset(s3_train_shards, length=num_batches, shard_selection=worker_urls)
         .shuffle(args.shuffle)
         .decode("pil")
         .to_tuple("jpg;png;jpeg cls")
